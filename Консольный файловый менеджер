@@ -1,0 +1,194 @@
+import os
+import shutil
+import platform
+
+
+def create_folder():
+    folder_name = input("Введите имя папки: ")
+    os.mkdir(folder_name)
+    print(f"Папка {folder_name} успешно создана")
+
+
+def delete_file_or_folder():
+    file_or_folder_name = input("Введите имя файла или папки: ")
+    try:
+        if os.path.isdir(file_or_folder_name):
+            shutil.rmtree(file_or_folder_name)
+            print(f"Папка {file_or_folder_name} успешно удалена")
+        else:
+            os.remove(file_or_folder_name)
+            print(f"Файл {file_or_folder_name} успешно удален")
+    except OSError:
+        print(f"Не удалось удалить {file_or_folder_name}")
+
+
+def copy_file_or_folder():
+    source_name = input("Введите имя файла или папки, которую нужно скопировать: ")
+    destination_name = input("Введите имя папки, в которую нужно скопировать: ")
+    try:
+        if os.path.isdir(source_name):
+            shutil.copytree(source_name, os.path.join(destination_name, os.path.basename(source_name)))
+            print(f"Папка {source_name} успешно скопирована в {destination_name}")
+        else:
+            shutil.copy2(source_name, destination_name)
+            print(f"Файл {source_name} успешно скопирован в {destination_name}")
+    except OSError:
+        print(f"Не удалось скопировать {source_name}")
+
+
+def list_contents():
+    print("Содержимое рабочей директории:")
+    for item in os.listdir():
+        print(item)
+
+
+def list_folders():
+    print("Список папок в рабочей директории:")
+    for item in os.listdir():
+        if os.path.isdir(item):
+            print(item)
+
+
+def list_files():
+    print("Список файлов в рабочей директории:")
+    for item in os.listdir():
+        if os.path.isfile(item):
+            print(item)
+
+
+def show_system_info():
+    print(f"Операционная система: {platform.system()}")
+    print(f"Версия: {platform.release()}")
+
+
+def show_author_info():
+    print("Автор: Ваше имя и фамилия")
+
+
+import random
+
+def game():
+    # Словарь известных людей и их годов рождения
+    people = {
+        'Билл Гейтс': '28.10.1955',
+        'Стив Джобс': '24.02.1955',
+        'Марк Цукерберг': '14.05.1984',
+        'Элон Маск': '28.06.1971',
+        'Шон Паркер': '03.12.1979',
+        'Дональд Трамп': '14.06.1946',
+        'Александр Лукашенко': '30.08.1954',
+        'Владимир Путин': '07.10.1952',
+        'Ким Чен Ын': '08.01.1983',
+        'Ангела Меркель': '17.07.1954'
+    }
+
+    # Выбираем 5 случайных людей
+    random_people = random.sample(list(people.keys()), 5)
+
+    # Заполняем годы рождения для выбранных людей
+    for person in random_people:
+        birth_year = people[person]
+        user_answer = input(f'Введите дату рождения {person} в формате dd.mm.yyyy: ')
+        people[person] = user_answer
+
+    # Проверяем ответы пользователя
+    correct_answers = 0
+    wrong_answers = 0
+
+    for person in random_people:
+        birth_date = people[person]
+        day, month, year = birth_date.split('.')
+        month_names = {
+            '01': 'января',
+            '02': 'февраля',
+            '03': 'марта',
+            '04': 'апреля',
+            '05': 'мая',
+            '06': 'июня',
+            '07': 'июля',
+            '08': 'августа',
+            '09': 'сентября',
+            '10': 'октября',
+            '11': 'ноября',
+            '12': 'декабря',
+        }
+        month_name = month_names[month]
+        user_answer = input(
+            f'{person} родился {day} {month_name} {year} года. Введите дату рождения в формате dd.mm.yyyy: ')
+        if birth_date == user_answer:
+            print('Правильно!')
+            correct_answers += 1
+        else:
+            print(f'Неправильно! Правильный ответ: {person} родился {day} {month_name} {year} года')
+            wrong_answers += 1
+
+    # Выводим результаты игры
+    print()
+    print('Количество правильных ответов:', correct_answers)
+    print('Количество ошибок:', wrong_answers)
+    print('Процент правильных ответов:', correct_answers * 100 / 5, '%')
+    print('Процент неправильных ответов:', wrong_answers * 100 / 5,
+
+
+
+balance = 0
+history = []
+
+def add_money():
+    global balance
+    amount = float(input('Введите сумму для пополнения счета: '))
+    balance += amount
+    print(f'Баланс пополнен на {amount}. Текущий баланс: {balance}')
+
+def buy_item():
+    global balance, history
+    amount = float(input('Введите сумму покупки: '))
+    if amount > balance:
+        print('На счету недостаточно денег!')
+        return
+    item = input('Введите название покупки: ')
+    balance -= amount
+    history.append((item, amount))
+    print(f'Покупка "{item}" на сумму {amount} успешно проведена. Текущий баланс: {balance}')
+
+def show_history():
+    global history
+    print('История покупок:')
+    for item, amount in history:
+        print(f'{item}: {amount}')
+
+while True:
+    print('1. Пополнение счета')
+    print('2. Покупка')
+    print('3. История покупок')
+    print('4. Выход')
+
+    choice = input('Выберите пункт меню: ')
+    if choice == '1':
+        add_money()
+    elif choice == '2':
+        buy_item()
+    elif choice == '3':
+        show_history()
+    elif choice == '4':
+        break
+    else:
+        print('Неверный пункт меню')
+
+
+def main():
+    while True:
+        print("Меню:")
+        print("1. Создать папку")
+        print("2. Удалить файл или папку")
+        print("3. Скопировать файл или папку")
+        print("4. Просмотр содержимого рабочей директории")
+        print("5. Посмотреть только папки")
+        print("6. Посмотреть только файлы")
+        print("7. Просмотр информации об операционной системе")
+        print("8. Показать информацию об авторе программы")
+        print("9. Играть в викторину")
+        print("10. Показать номер банковского счета")
+        print("0. Выход")
+
+        choice = input("Введите номер действия: ")
