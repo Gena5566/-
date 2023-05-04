@@ -1,0 +1,126 @@
+import cv2
+import numpy as np
+from tensorflow.keras.models import load_model
+import pandas as pd
+import datetime
+import face_recognition
+import time
+
+
+face_cascade = cv2.CascadeClassifier('/Users/n.a./PycharmProjects/itproger/venv/lib/python3.11/https:/raw.githubusercontent.com/gauravsekhri/Face-Detection-using-OpenCV/file.txt')
+model = load_model('/Users/n.a./Downloads/model_VGG_all.h5')
+
+
+# Define class labels
+class_labels = ["Person_1", "Person_2", "Person_3", "Person_4", "Person_5", "Person_6", "Person_7", "Person_8", "Person_9"]
+
+# создание DataFrame
+results_df = pd.DataFrame(columns=['Class', 'Timestamp', 'Confidence'])
+
+# Задержка на 10 секунд
+time.sleep(10)
+capture = cv2.VideoCapture(0)
+
+ #Limit recognition attempts to 50
+recognition_attempts = 100
+
+while recognition_attempts > 0:
+    recognition_attempts -= 1
+
+    ret, img = capture.read()
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.5, minNeighbors=5, minSize=(20, 20))
+
+    if len(faces) == 0:
+        print("Лицо отсутствует в базе данных")
+        continue
+
+    for (x, y, w, h) in faces:
+        roi_gray = gray[y:y + h, x:x + w]
+        roi_gray = cv2.resize(roi_gray, (96, 96))
+
+        roi_gray = cv2.cvtColor(roi_gray, cv2.COLOR_GRAY2RGB)
+        roi_color = cv2.cvtColor(roi_gray, cv2.COLOR_BGR2RGB)
+        roi_color = np.expand_dims(roi_color, axis=0)
+        roi_color = roi_color / 255.0
+
+        prediction = model.predict(roi_color)[0]
+        class_idx = np.argmax(prediction)
+        confidence = round(prediction[class_idx] * 100, 2)
+
+        if confidence > 95:
+            class_label = class_labels[class_idx]
+            text_color = (0, 255, 0)
+        else:
+            class_label = "Unknown"
+            text_color = (0, 0, 255)
+
+        cv2.putText(img, "Class: {}".format(class_label), (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 2)
+        cv2.putText(img, "Confidence: {}%".format(confidence), (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 2)
+
+        # Output face image in the top-right corner
+        face_img = cv2.resize(roi_color[0], (100, 100))
+        img[0:100, img.shape[1] - 100:img.shape[1], :] = face_img
+
+        # Record timestamp
+        now = datetime.datetime.now()
+        timestamp = now.strftime("%Y-%m-%d %H:%M:%S")
+        cv2.putText(img, timestamp, (img.shape[1] - 150, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+
+        cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 2)
+
+        # Add result to dataframe if class label is not 'Unknown'
+        if class_label != 'Unknown':
+            # Convert timestamp to datetime object
+            timestamp_datetime = datetime.datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
+
+            # Check if there are already results for this class label
+            class_results = results_df[results_df['Class'] == class_label]
+
+            # If there are already results, calculate the average confidence and update the timestamp
+            if len(class_results) > 0:
+                avg_confidence = (class_results['Confidence'].mean() + confidence) / 2
+                latest_timestamp = class_results['Timestamp'].max()
+
+                # Only add the result if it's been at least 5 minutes since the last result for this class label
+                if (timestamp_datetime - latest_timestamp).total_seconds() > 300:
+                    results_df = results_df.append(
+                        {'Class': class_label, 'Timestamp': timestamp_datetime, 'Confidence': avg_confidence},
+                        ignore_index=True)
+            # If there are no existing results for this class label, add the new result
+            else:
+
+                # Initialize an empty DataFrame
+                results_df = pd.DataFrame(columns=['Class', 'Timestamp', 'Confidence'])
+
+                # Detect faces in the image
+                face_locations = face_recognition.face_locations(rgb_image, model="hog")
+
+                # Generate face encodings for each face in the image
+                face_encodings = face_recognition.face_encodings(rgb_image, face_locations)
+
+                # Loop through detected faces
+                for i, face_encoding in enumerate(face_encodings):
+                    # Try to match each face in the image to a known face
+                    matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
+                    face_distances = face_recognition.face_distance(known_face_encodings, face_encoding)
+                    best_match_index = np.argmin(face_distances)
+
+                    # If a match was found, add the class label and confidence score to the results DataFrame
+                    if matches[best_match_index]:
+                        class_label = known_face_names[best_match_index]
+                        confidence = 1 - face_distances[best_match_index]
+                        timestamp = datetime.now()
+                        results_df = pd.concat([results_df, pd.DataFrame(
+                            {'Class': [class_label], 'Timestamp': [timestamp], 'Confidence': [confidence]})])
+                    else:
+                        print("Лицо отсутствует в базе данных")
+
+    cv2.imshow('From Camera', img)
+    k = cv2.waitKey(30) & 0xFF
+    if k == 27:
+        break
+
+# Print results
+print(results_df)
